@@ -6,14 +6,11 @@ function App() {
   const [content, setContent] = useState("");
   const [lines, setLines] = useState([""]);
   const [currentLine, setCurrentLine] = useState(0);
-  const [tooltipHidden, setToolTipHidden] = useState(true);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const handleKeys = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (!inputRef.current) return;
     const key = event.key;
-    console.log({ pos: inputRef.current.selectionStart });
-    console.log({ key });
     const cursorPos = inputRef.current!.selectionStart;
 
     if (key === "Enter") {
@@ -23,20 +20,31 @@ function App() {
         result.push("");
         return result;
       });
-      setContent("");
+      let identLevel = 0;
+      for (const c of content) {
+        if (c !== "\t") {
+          break;
+        }
+        identLevel++;
+      }
+      const isList = lines[currentLine].match(/\s*(?=-\s*\w)/);
+      setContent(
+        new Array(identLevel).fill("\t").join("") + (isList ? "- " : "")
+      );
       setCurrentLine((prev) => prev + 1);
     } else if (key === "Backspace" && !content) {
       setCurrentLine((prev) => {
         const nextLine = Math.max(prev - 1, 0);
         setContent(lines[nextLine]);
-        setLines((prev) => {
-          const result = [...prev];
-          result.pop();
-          return result;
-        });
+        if (currentLine > 0)
+          setLines((prev) => {
+            const result = [...prev];
+            result.pop();
+            return result;
+          });
         return nextLine;
       });
-    } else if (key === "Backspace") {
+    } else if (key === "Backspace" && content) {
       setContent((prev) => {
         let next = prev.slice(0, cursorPos! - 1) + prev.slice(cursorPos);
         if (cursorPos === prev.length) {
@@ -87,14 +95,16 @@ function App() {
       });
     } else if (key === "Tab") {
       setContent((prev) => {
-        let next = "";
+        let next = prev;
         const key = "\t";
-        if (cursorPos !== 0) {
+        const isList = content.match(/^[\t ]*(?=-\s)/);
+        if (cursorPos !== 0 && !isList && !event.shiftKey) {
           next = prev.slice(0, cursorPos) + key + prev.slice(cursorPos);
-        } else {
+        } else if (!event.shiftKey) {
           next = key + prev;
+        } else if (prev.match(/^\s+/) && event.shiftKey) {
+          next = prev.slice(1);
         }
-
         setLines((prev) => {
           const result = [...prev];
           result[currentLine] = next;
@@ -132,10 +142,9 @@ function App() {
             key={i}
             style={{ top: `${i * 20}px`, minHeight: "24px" }}
           >
-            {/* !TODO: Seperate line in quotations and tabs */}
-            &nbsp;
             <span className="m-0 p-0">
-              {[...line].map((c) => (c === "\t" ? "&emsp;" : c))}
+              {line &&
+                [...line].map((c) => (c === "\t" ? <span>&emsp;</span> : c))}
             </span>
           </div>
         ))}
