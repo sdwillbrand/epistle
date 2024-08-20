@@ -2,40 +2,60 @@ import { useState, KeyboardEvent, useRef, useEffect } from "react";
 import classNames from "classnames";
 import { SaveFile } from "../wailsjs/go/main/App";
 import { ClipboardGetText, ClipboardSetText } from "../wailsjs/runtime";
+import { VerseSuggestion } from "./components/VerseSearch";
+import { useTextWidth } from "./hooks/useTextWidth";
+import { useAtomValue, useSetAtom } from "jotai";
+import {
+  openVerseSuggestionAtom,
+  verseSuggestionAtom,
+  verseSuggestionIndexAtom,
+} from "./atoms";
 
 function App() {
   const [content, setContent] = useState("");
   const [lines, setLines] = useState([""]);
   const [currentLine, setCurrentLine] = useState(0);
+  const { open: openVerseSuggestion, index: suggestionIndex } =
+    useAtomValue(verseSuggestionAtom);
+  const setOpenVerseSuggestion = useSetAtom(openVerseSuggestionAtom);
+  const setVerseSuggestionIndex = useSetAtom(verseSuggestionIndexAtom);
+  const [suggestion, setSuggestion] = useState("");
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
-  const canvasRef = useRef<CanvasRenderingContext2D | null>(null);
+  const { getCaretIndexAtPosition, measureText } = useTextWidth(inputRef);
 
   useEffect(() => {
-    if (canvasRef.current)
-      canvasRef.current = document.createElement("canvas").getContext("2d");
-  }, []);
+    const result = content.match(/\(([^)]+)\)$/); // Match the slash followed by non-whitespace characters
+    if (!result) {
+      setSuggestion("");
+    } else {
+      setSuggestion(result[0].slice(1, -1)); // Extract the suggestion by removing the slash
+    }
+  }, [content]);
 
   const handleKeys = async (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (!inputRef.current) return;
     const key = event.key;
     const cursorPos = inputRef.current!.selectionStart;
     if (key === "Enter") {
-      setLines((prev) => {
-        const result = [...prev];
-        result[currentLine] = content;
-        result.push("");
-        return result;
-      });
-      let identLevel = 0;
-      for (const c of content) {
-        if (c !== "\t") {
-          break;
+      if (!openVerseSuggestion) {
+        setLines((prev) => {
+          const result = [...prev];
+          result[currentLine] = content;
+          result.push("");
+          return result;
+        });
+        let identLevel = 0;
+        for (const c of content) {
+          if (c !== "\t") {
+            break;
+          }
+          identLevel++;
         }
-        identLevel++;
+        const isList = lines[currentLine].match(/\s*(?=-\s*\w)/);
+        setContent("\t".repeat(identLevel) + (isList ? "- " : ""));
+        setCurrentLine((prev) => prev + 1);
+      } else {
       }
-      const isList = lines[currentLine].match(/\s*(?=-\s*\w)/);
-      setContent("\t".repeat(identLevel) + (isList ? "- " : ""));
-      setCurrentLine((prev) => prev + 1);
     } else if (key === "Backspace" && !content) {
       setCurrentLine((prev) => {
         const nextLine = Math.max(prev - 1, 0);
@@ -106,22 +126,50 @@ function App() {
         });
         return next;
       });
+      if (key === "(") {
+        setOpenVerseSuggestion(true);
+        setContent((prev) => {
+          const key = ")";
+          const next =
+            prev.slice(0, cursorPos + 1) + key + prev.slice(cursorPos + 1);
+          setLines((prev) => {
+            const result = [...prev];
+            result[currentLine] = next;
+            return result;
+          });
+          return next;
+        });
+      }
       setTimeout(() => {
         inputRef.current!.focus();
         inputRef.current!.setSelectionRange(cursorPos + 1, cursorPos + 1);
       }, 1);
-    } else if (key === "ArrowDown" && currentLine + 1 < lines.length) {
-      setCurrentLine((prev) => {
-        const nextLine = prev + 1;
-        setContent(lines[nextLine]);
-        return nextLine;
-      });
-    } else if (key === "ArrowUp" && currentLine > 0) {
-      setCurrentLine((prev) => {
-        const nextLine = Math.max(prev - 1, 0);
-        setContent(lines[nextLine]);
-        return nextLine;
-      });
+    } else if (key === "ArrowDown") {
+      event.preventDefault();
+      if (!openVerseSuggestion && currentLine + 1 < lines.length) {
+        setCurrentLine((prev) => {
+          const nextLine = prev + 1;
+          setContent(lines[nextLine]);
+          return nextLine;
+        });
+      } else {
+        setVerseSuggestionIndex(
+          suggestionIndex === undefined ? 0 : suggestionIndex + 1
+        );
+      }
+    } else if (key === "ArrowUp") {
+      event.preventDefault();
+      if (!openVerseSuggestion && currentLine > 0) {
+        setCurrentLine((prev) => {
+          const nextLine = Math.max(prev - 1, 0);
+          setContent(lines[nextLine]);
+          return nextLine;
+        });
+      } else {
+        setVerseSuggestionIndex(
+          suggestionIndex === undefined ? 0 : Math.max(suggestionIndex - 1, 0)
+        );
+      }
     } else if (key === "ArrowLeft" && currentLine > 0 && cursorPos === 0) {
       setCurrentLine((prev) => {
         const nextLine = Math.max(prev - 1, 0);
@@ -250,32 +298,6 @@ function App() {
               }, 1);
               const mouseX = e.clientX;
               // Optimized text width measurement using canvas
-              const getCaretIndexAtPosition = (
-                input: HTMLTextAreaElement,
-                relativeX: number
-              ) => {
-                const canvas = canvasRef.current;
-                if (!canvas) return -1;
-                const text = input.value;
-                let position = -1;
-
-                // Get the font style from the input
-                const fontStyle = window.getComputedStyle(input).font;
-                canvas.font = fontStyle;
-
-                let totalWidth = 0;
-                for (let i = 0; i < text.length; i++) {
-                  const charWidth = canvas.measureText(text[i]).width;
-                  totalWidth += charWidth;
-
-                  if (totalWidth >= relativeX) {
-                    position = i;
-                    break;
-                  }
-                }
-
-                return position;
-              };
 
               setTimeout(() => {
                 if (inputRef.current) {
@@ -289,7 +311,7 @@ function App() {
                   const relativeX = mouseX - left;
 
                   // Find the character index at the mouse position
-                  const position = getCaretIndexAtPosition(input, relativeX);
+                  const position = getCaretIndexAtPosition(relativeX);
 
                   // Set the caret position
                   input.setSelectionRange(position, position);
@@ -311,6 +333,17 @@ function App() {
           className="bg-black text-white outline-none resize-none overflow-hidden z-10 absolute w-full shadow-sm caret-amber-500"
           style={{ top: `${currentLine * 20}px`, height: "24px" }}
           value={content}
+        />
+        <VerseSuggestion
+          hidden={!openVerseSuggestion}
+          input={suggestion}
+          selectedIndex={suggestionIndex}
+          style={{
+            top: `${(currentLine + 1) * 20}px`,
+            left: `${measureText(
+              content.slice(0, inputRef.current?.selectionStart ?? 0)
+            )}px`,
+          }}
         />
       </div>
     </div>
