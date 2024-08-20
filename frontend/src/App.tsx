@@ -11,10 +11,6 @@ function App() {
   const canvasRef = useRef<CanvasRenderingContext2D | null>(null);
 
   useEffect(() => {
-    console.log({ lines });
-  });
-
-  useEffect(() => {
     if (canvasRef.current)
       canvasRef.current = document.createElement("canvas").getContext("2d");
   }, []);
@@ -23,7 +19,6 @@ function App() {
     if (!inputRef.current) return;
     const key = event.key;
     const cursorPos = inputRef.current!.selectionStart;
-
     if (key === "Enter") {
       setLines((prev) => {
         const result = [...prev];
@@ -39,9 +34,7 @@ function App() {
         identLevel++;
       }
       const isList = lines[currentLine].match(/\s*(?=-\s*\w)/);
-      setContent(
-        new Array(identLevel).fill("\t").join("") + (isList ? "- " : "")
-      );
+      setContent("\t".repeat(identLevel) + (isList ? "- " : ""));
       setCurrentLine((prev) => prev + 1);
     } else if (key === "Backspace" && !content) {
       setCurrentLine((prev) => {
@@ -55,7 +48,12 @@ function App() {
           });
         return nextLine;
       });
-    } else if (key === "Backspace" && content) {
+    } else if (
+      key === "Backspace" &&
+      content &&
+      !event.metaKey &&
+      !event.altKey
+    ) {
       setContent((prev) => {
         let next = prev.slice(0, cursorPos! - 1) + prev.slice(cursorPos);
         if (cursorPos === prev.length) {
@@ -72,6 +70,27 @@ function App() {
         inputRef.current!.focus();
         inputRef.current!.setSelectionRange(cursorPos - 1, cursorPos - 1);
       }, 1);
+    } else if (key === "Backspace" && event.metaKey) {
+      setContent(() => {
+        const next = "";
+        setLines((prev) => {
+          const result = [...prev];
+          result[currentLine] = next;
+          return result;
+        });
+        return next;
+      });
+    } else if (key === "Backspace" && event.altKey) {
+      setContent((prev) => {
+        const index = prev.trim().lastIndexOf(" ");
+        const next = prev.slice(0, index + 1);
+        setLines((prev) => {
+          const result = [...prev];
+          result[currentLine] = next;
+          return result;
+        });
+        return next;
+      });
     } else if (key.length === 1 && !event.metaKey) {
       setContent((prev) => {
         let next = "";
@@ -80,7 +99,6 @@ function App() {
         } else {
           next = key + prev;
         }
-
         setLines((prev) => {
           const result = [...prev];
           result[currentLine] = next;
@@ -153,17 +171,31 @@ function App() {
       await ClipboardSetText(selectedText);
     } else if (key === "x" && event.metaKey) {
       const { selectionStart, selectionEnd } = inputRef.current;
-      const selectedText = content.slice(selectionStart, selectionEnd);
-      await ClipboardSetText(selectedText);
-      setContent((prev) => {
-        const next = prev.slice(0, selectionStart) + prev.slice(selectionEnd);
-        setLines((prev) => {
-          const result = [...prev];
-          result[currentLine] = next;
-          return result;
+      let selectedText = "";
+      if (selectionStart === selectionEnd) {
+        selectedText = content;
+        setContent(() => {
+          const next = currentLine > 0 ? lines[currentLine - 1] : "";
+          setLines((prev) => [
+            ...prev.slice(0, currentLine - 1),
+            ...prev.slice(currentLine),
+          ]);
+          setCurrentLine((prev) => Math.max(prev - 1, 0));
+          return next;
         });
-        return next;
-      });
+      } else {
+        selectedText = content.slice(selectionStart, selectionEnd);
+        setContent((prev) => {
+          const next = prev.slice(0, selectionStart) + prev.slice(selectionEnd);
+          setLines((prev) => {
+            const result = [...prev];
+            result[currentLine] = next;
+            return result;
+          });
+          return next;
+        });
+      }
+      await ClipboardSetText(selectedText);
     } else if (key === "v" && event.metaKey) {
       const copiedText = await ClipboardGetText();
       setContent((prev) => {
@@ -191,9 +223,7 @@ function App() {
   };
 
   const handleSave = () => {
-    SaveFile("test.txt", lines.join("\n")).then(() =>
-      console.log("Successful")
-    );
+    SaveFile("test.md", lines.join("\n")).then(() => console.log("Successful"));
   };
 
   return (
@@ -269,14 +299,16 @@ function App() {
           >
             <span className="m-0 p-0">
               {line &&
-                [...line].map((c) => (c === "\t" ? <span>&emsp;</span> : c))}
+                [...line].map((c, i) =>
+                  c === "\t" ? <span key={c + i}>&emsp;</span> : c
+                )}
             </span>
           </div>
         ))}
         <textarea
           ref={inputRef}
           onKeyDown={handleKeys}
-          className="bg-black text-white outline-none resize-none overflow-hidden z-10 absolute w-full shadow-sm"
+          className="bg-black text-white outline-none resize-none overflow-hidden z-10 absolute w-full shadow-sm caret-amber-500"
           style={{ top: `${currentLine * 20}px`, height: "24px" }}
           value={content}
         />

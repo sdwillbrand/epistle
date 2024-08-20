@@ -1,4 +1,4 @@
-module wails-text-editor
+module epistle
 
 go 1.21
 

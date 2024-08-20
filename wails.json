@@ -1,7 +1,7 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "wails-text-editor",
-  "outputfilename": "wails-text-editor",
+  "name": "Epistle",
+  "outputfilename": "Epistle",
   "frontend:install": "pnpm install",
   "frontend:build": "pnpm run build",
   "frontend:dev:watcher": "pnpm run dev",
