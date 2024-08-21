@@ -21,3 +21,6 @@ To build a redistributable, production mode package, use `wails build`.
 ## Todo
 
 - [ ] "---" -> Divider
+- [ ] Remove selected area
+- [ ] Remove closing parenthesis when immediate followed
+- [ ] 
