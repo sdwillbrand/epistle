@@ -12,9 +12,9 @@ import {
 } from "./atoms";
 
 function App() {
-  const [content, setContent] = useState("");
+  const [currentLineText, setCurrentLineText] = useState("");
   const [lines, setLines] = useState([""]);
-  const [currentLine, setCurrentLine] = useState(0);
+  const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const { open: openVerseSuggestion, index: suggestionIndex } =
     useAtomValue(verseSuggestionAtom);
   const setOpenVerseSuggestion = useSetAtom(openVerseSuggestionAtom);
@@ -22,134 +22,183 @@ function App() {
   const [suggestion, setSuggestion] = useState("");
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const { getCaretIndexAtPosition, measureText } = useTextWidth(inputRef);
+  const [history, setHistory] = useState<string[][]>([[]]);
+  const [currentStateIndex, setCurrentStateIndex] = useState<number[]>([]); // Pointer to current state for each line
 
   useEffect(() => {
-    const result = content.match(/\(([^)]+)\)$/); // Match the slash followed by non-whitespace characters
+    const result = currentLineText.match(/\(([^)]+)\)$/); // Match the slash followed by non-whitespace characters
     if (!result) {
       setSuggestion("");
     } else {
-      setSuggestion(result[0].slice(1, -1)); // Extract the suggestion by removing the slash
+      setSuggestion(result[0].slice(1, -1)); // Extract the suggestion by removing the parenthesis
     }
-  }, [content]);
+  }, [currentLineText]);
 
   const handleKeys = async (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (!inputRef.current) return;
     const key = event.key;
     const cursorPos = inputRef.current!.selectionStart;
     if (key === "Enter") {
+      let nextLineText = "";
       if (!openVerseSuggestion) {
         setLines((prev) => {
-          const result = [...prev];
-          result[currentLine] = content;
-          result.push("");
+          let result = [...prev]; // Copy previous lines
+
+          // Case 1: At the beginning of the first line, insert a new line above
+          if (cursorPos === 0 && currentLineIndex === 0) {
+            result.unshift(""); // Add an empty line at the beginning
+            nextLineText = currentLineText; // Set next content to the current line's text
+
+            // Case 2: Cursor is not at the start (in the middle of a line), split the current line
+          } else if (cursorPos !== 0) {
+            const beforeCursor = currentLineText.slice(0, cursorPos); // Text before cursor
+            const afterCursor = currentLineText.slice(cursorPos); // Text after cursor
+
+            // Update current line with text before the cursor
+            result[currentLineIndex] = beforeCursor;
+
+            // Insert new line with text after the cursor
+            result.splice(currentLineIndex + 1, 0, afterCursor);
+            nextLineText = afterCursor; // The newly created line's content is now the focus
+
+            // Case 3: At the start of a line that's not the first one, insert a new line above
+          } else {
+            result.splice(currentLineIndex, 0, ""); // Insert empty line at the current index
+          }
+
           return result;
         });
+
         let identLevel = 0;
-        for (const c of content) {
+        for (const c of currentLineText) {
           if (c !== "\t") {
             break;
           }
           identLevel++;
         }
-        const isList = lines[currentLine].match(/\s*(?=-\s*\w)/);
-        setContent("\t".repeat(identLevel) + (isList ? "- " : ""));
-        setCurrentLine((prev) => prev + 1);
+        const isList = lines[currentLineIndex].match(/\s*(?=-\s*\w)/);
+        setCurrentLineText(
+          "\t".repeat(identLevel) + (isList ? "- " : "") + nextLineText
+        );
+        setCurrentLineIndex((prev) => prev + 1);
       } else {
       }
-    } else if (key === "Backspace" && !content) {
-      setCurrentLine((prev) => {
+    } else if (key === "Backspace" && !currentLineText) {
+      setCurrentLineIndex((prev) => {
         const nextLine = Math.max(prev - 1, 0);
-        setContent(lines[nextLine]);
-        if (currentLine > 0)
+        setCurrentLineText(lines[nextLine]);
+        if (currentLineIndex > 0)
           setLines((prev) => {
             const result = [...prev];
-            result.pop();
+            result.splice(currentLineIndex, 1);
             return result;
           });
         return nextLine;
       });
     } else if (
       key === "Backspace" &&
-      content &&
+      currentLineText &&
       !event.metaKey &&
       !event.altKey
     ) {
-      setContent((prev) => {
-        let next = prev.slice(0, cursorPos! - 1) + prev.slice(cursorPos);
-        if (cursorPos === prev.length) {
-          next = prev.slice(0, -1);
-        }
-        setLines((prev) => {
-          const result = [...prev];
-          result[currentLine] = next;
-          return result;
+      if (cursorPos !== 0) {
+        setCurrentLineText((prev) => {
+          let next = prev.slice(0, cursorPos - 1) + prev.slice(cursorPos);
+          if (cursorPos === prev.length) {
+            next = prev.slice(0, -1);
+          }
+          return next;
         });
-        return next;
-      });
+      } else if (currentLineIndex > 0) {
+        setCurrentLineIndex((prev) => {
+          const nextLine = Math.max(prev - 1, 0);
+          setCurrentLineText((prev) => lines[nextLine] + prev);
+          if (currentLineIndex > 0)
+            setLines((prev) => {
+              const result = [...prev];
+              result.splice(currentLineIndex, 1);
+              return result;
+            });
+          return nextLine;
+        });
+      }
       setTimeout(() => {
         inputRef.current!.focus();
         inputRef.current!.setSelectionRange(cursorPos - 1, cursorPos - 1);
-      }, 1);
+      }, 0);
     } else if (key === "Backspace" && event.metaKey) {
-      setContent(() => {
-        const next = "";
-        setLines((prev) => {
-          const result = [...prev];
-          result[currentLine] = next;
-          return result;
-        });
-        return next;
-      });
+      setCurrentLineText("");
     } else if (key === "Backspace" && event.altKey) {
-      setContent((prev) => {
-        const index = prev.trim().lastIndexOf(" ");
-        const next = prev.slice(0, index + 1);
-        setLines((prev) => {
-          const result = [...prev];
-          result[currentLine] = next;
-          return result;
-        });
-        return next;
-      });
+      let startingIndex = -1;
+      const isWhitespace = /\s/.test(currentLineText[cursorPos - 1]);
+      for (let i = cursorPos - 1; i > 0; i--) {
+        if (
+          (!/\s/.test(currentLineText[i]) && isWhitespace) ||
+          (/\s/.test(currentLineText[i]) && !isWhitespace)
+        ) {
+          console.log({
+            c: currentLineText[i],
+            isWhitespace,
+            i: currentLineText[cursorPos],
+          });
+          startingIndex = i;
+          break;
+        }
+      }
+      console.log({ startingIndex });
+      if (startingIndex === -1) {
+        setCurrentLineText("");
+      } else {
+        setCurrentLineText(
+          (prev) => prev.slice(0, startingIndex + 1) + prev.slice(cursorPos)
+        );
+      }
+      setTimeout(() => {
+        inputRef.current!.focus();
+        inputRef.current!.setSelectionRange(
+          startingIndex + 1,
+          startingIndex + 1
+        );
+      }, 0);
     } else if (key.length === 1 && !event.metaKey) {
-      setContent((prev) => {
+      setCurrentLineText((prev) => {
         let next = "";
         if (cursorPos !== 0) {
           next = prev.slice(0, cursorPos) + key + prev.slice(cursorPos);
         } else {
           next = key + prev;
         }
-        setLines((prev) => {
-          const result = [...prev];
-          result[currentLine] = next;
-          return result;
-        });
+
         return next;
       });
       if (key === "(") {
         setOpenVerseSuggestion(true);
-        setContent((prev) => {
+        setCurrentLineText((prev) => {
           const key = ")";
           const next =
             prev.slice(0, cursorPos + 1) + key + prev.slice(cursorPos + 1);
           setLines((prev) => {
             const result = [...prev];
-            result[currentLine] = next;
+            result[currentLineIndex] = next;
             return result;
           });
           return next;
         });
       }
       setTimeout(() => {
-        inputRef.current!.focus();
         inputRef.current!.setSelectionRange(cursorPos + 1, cursorPos + 1);
-      }, 1);
+      }, 0);
     } else if (key === "ArrowDown") {
       event.preventDefault();
-      if (!openVerseSuggestion && currentLine + 1 < lines.length) {
-        setCurrentLine((prev) => {
+      if (!openVerseSuggestion && currentLineIndex + 1 < lines.length) {
+        setCurrentLineIndex((prev) => {
           const nextLine = prev + 1;
-          setContent(lines[nextLine]);
+          setCurrentLineText(lines[nextLine]);
+          setLines((prev) => {
+            const result = [...prev];
+            result[currentLineIndex] = currentLineText;
+            return result;
+          });
           return nextLine;
         });
       } else {
@@ -159,10 +208,15 @@ function App() {
       }
     } else if (key === "ArrowUp") {
       event.preventDefault();
-      if (!openVerseSuggestion && currentLine > 0) {
-        setCurrentLine((prev) => {
+      if (!openVerseSuggestion && currentLineIndex > 0) {
+        setCurrentLineIndex((prev) => {
           const nextLine = Math.max(prev - 1, 0);
-          setContent(lines[nextLine]);
+          setCurrentLineText(lines[nextLine]);
+          setLines((prev) => {
+            const result = [...prev];
+            result[currentLineIndex] = currentLineText;
+            return result;
+          });
           return nextLine;
         });
       } else {
@@ -170,31 +224,31 @@ function App() {
           suggestionIndex === undefined ? 0 : Math.max(suggestionIndex - 1, 0)
         );
       }
-    } else if (key === "ArrowLeft" && currentLine > 0 && cursorPos === 0) {
-      setCurrentLine((prev) => {
+    } else if (key === "ArrowLeft" && currentLineIndex > 0 && cursorPos === 0) {
+      setCurrentLineIndex((prev) => {
         const nextLine = Math.max(prev - 1, 0);
-        setContent(lines[nextLine]);
+        setCurrentLineText(lines[nextLine]);
         return nextLine;
       });
       setTimeout(() => {
         inputRef.current!.focus();
         inputRef.current!.setSelectionRange(-1, -1);
-      }, 1);
+      }, 0);
     } else if (
       key === "ArrowRight" &&
-      currentLine < lines.length - 1 &&
-      cursorPos === content.length
+      currentLineIndex < lines.length - 1 &&
+      cursorPos === currentLineText.length
     ) {
-      setCurrentLine((prev) => {
+      setCurrentLineIndex((prev) => {
         const nextLine = prev + 1;
-        setContent(lines[nextLine]);
+        setCurrentLineText(lines[nextLine]);
         return nextLine;
       });
     } else if (key === "Tab") {
-      setContent((prev) => {
+      setCurrentLineText((prev) => {
         let next = prev;
         const key = "\t";
-        const isList = content.match(/^[\t ]*(?=-\s)/);
+        const isList = currentLineText.match(/^[\t ]*(?=-\s)/);
         if (cursorPos !== 0 && !isList && !event.shiftKey) {
           next = prev.slice(0, cursorPos) + key + prev.slice(cursorPos);
         } else if (!event.shiftKey) {
@@ -202,51 +256,41 @@ function App() {
         } else if (prev.match(/^\s+/) && event.shiftKey) {
           next = prev.slice(1);
         }
-        setLines((prev) => {
-          const result = [...prev];
-          result[currentLine] = next;
-          return result;
-        });
         return next;
       });
       setTimeout(() => {
-        inputRef.current!.focus();
+        inputRef.current?.focus();
         inputRef.current!.setSelectionRange(cursorPos + 1, cursorPos + 1);
-      }, 1);
+      }, 0);
     } else if (key === "c" && event.metaKey) {
       const { selectionStart, selectionEnd } = inputRef.current;
-      const selectedText = content.slice(selectionStart, selectionEnd);
+      const selectedText = currentLineText.slice(selectionStart, selectionEnd);
       await ClipboardSetText(selectedText);
     } else if (key === "x" && event.metaKey) {
       const { selectionStart, selectionEnd } = inputRef.current;
       let selectedText = "";
       if (selectionStart === selectionEnd) {
-        selectedText = content;
-        setContent(() => {
-          const next = currentLine > 0 ? lines[currentLine - 1] : "";
+        selectedText = currentLineText;
+        setCurrentLineText(() => {
+          const next = currentLineIndex > 0 ? lines[currentLineIndex - 1] : "";
           setLines((prev) => [
-            ...prev.slice(0, currentLine - 1),
-            ...prev.slice(currentLine),
+            ...prev.slice(0, currentLineIndex - 1),
+            ...prev.slice(currentLineIndex),
           ]);
-          setCurrentLine((prev) => Math.max(prev - 1, 0));
+          setCurrentLineIndex((prev) => Math.max(prev - 1, 0));
           return next;
         });
       } else {
-        selectedText = content.slice(selectionStart, selectionEnd);
-        setContent((prev) => {
+        selectedText = currentLineText.slice(selectionStart, selectionEnd);
+        setCurrentLineText((prev) => {
           const next = prev.slice(0, selectionStart) + prev.slice(selectionEnd);
-          setLines((prev) => {
-            const result = [...prev];
-            result[currentLine] = next;
-            return result;
-          });
           return next;
         });
       }
       await ClipboardSetText(selectedText);
     } else if (key === "v" && event.metaKey) {
       const copiedText = await ClipboardGetText();
-      setContent((prev) => {
+      setCurrentLineText((prev) => {
         let next = "";
         if (cursorPos !== 0) {
           next = prev.slice(0, cursorPos) + copiedText + prev.slice(cursorPos);
@@ -255,7 +299,7 @@ function App() {
         }
         setLines((prev) => {
           const result = [...prev];
-          result[currentLine] = next;
+          result[currentLineIndex] = next;
           return result;
         });
         return next;
@@ -266,8 +310,47 @@ function App() {
           cursorPos + copiedText.length,
           cursorPos + copiedText.length
         );
-      }, 1);
+      }, 0);
+    } else if (
+      key === "z" &&
+      event.metaKey &&
+      !event.shiftKey &&
+      currentLineIndex !== null &&
+      currentStateIndex[currentLineIndex] > 0
+    ) {
+      const updatedStateIndexes = [...currentStateIndex];
+      updatedStateIndexes[currentLineIndex] -= 1;
+
+      setCurrentStateIndex(updatedStateIndexes);
+      setCurrentLineText(
+        history[currentLineIndex][updatedStateIndexes[currentLineIndex]]
+      );
+
+      const updatedLines = [...lines];
+      updatedLines[currentLineIndex] =
+        history[currentLineIndex][updatedStateIndexes[currentLineIndex]];
+      setLines(updatedLines);
     }
+
+    // const updatedLines = [...lines];
+    // updatedLines[currentLineIndex] = currentLineText;
+
+    // // Update the history for the current line
+    // const updatedHistory = [...history];
+    // const newHistory = updatedHistory[currentLineIndex].slice(
+    //   0,
+    //   currentStateIndex[currentLineIndex] + 1
+    // );
+    // newHistory.push(currentLineText);
+    // updatedHistory[currentLineIndex] = newHistory;
+
+    // // Update the state index for the current line
+    // const updatedStateIndexes = [...currentStateIndex];
+    // updatedStateIndexes[currentLineIndex] = newHistory.length - 1;
+
+    // setLines(updatedLines);
+    // setHistory(updatedHistory);
+    // setCurrentStateIndex(updatedStateIndexes);
   };
 
   const handleSave = () => {
@@ -286,13 +369,18 @@ function App() {
         {lines.map((line, i) => (
           <div
             className={classNames("absolute w-full flex", {
-              hidden: i === currentLine,
+              hidden: i === currentLineIndex,
             })}
             key={i}
             style={{ top: `${i * 20}px`, minHeight: "20px" }}
             onClick={(e) => {
-              setCurrentLine(i);
-              setContent(lines[i]);
+              setLines((prev) => {
+                const result = [...prev];
+                result[currentLineIndex] = currentLineText;
+                return result;
+              });
+              setCurrentLineIndex(i);
+              setCurrentLineText(lines[i]);
               setTimeout(() => {
                 inputRef.current?.focus();
               }, 1);
@@ -331,17 +419,17 @@ function App() {
           ref={inputRef}
           onKeyDown={handleKeys}
           className="bg-black text-white outline-none resize-none overflow-hidden z-10 absolute w-full shadow-sm caret-amber-500"
-          style={{ top: `${currentLine * 20}px`, height: "24px" }}
-          value={content}
+          style={{ top: `${currentLineIndex * 20}px`, height: "24px" }}
+          value={currentLineText}
         />
         <VerseSuggestion
           hidden={!openVerseSuggestion}
           input={suggestion}
           selectedIndex={suggestionIndex}
           style={{
-            top: `${(currentLine + 1) * 20}px`,
+            top: `${(currentLineIndex + 1) * 20}px`,
             left: `${measureText(
-              content.slice(0, inputRef.current?.selectionStart ?? 0)
+              currentLineText.slice(0, inputRef.current?.selectionStart ?? 0)
             )}px`,
           }}
         />
