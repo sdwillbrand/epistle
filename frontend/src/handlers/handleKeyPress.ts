@@ -4,6 +4,7 @@ import { currentLineTextAtom } from "../atoms/currentLineTextAtom";
 import { editorLinesAtom } from "../atoms/editorLinesAtom";
 import { inputRefAtom } from "../atoms/inputRefAtom";
 import { openVerseSuggestionAtom } from "../atoms/verseSuggestionAtom";
+import { getNextToken } from "../utils/checkNextToken";
 import { refocusInput } from "../utils/refocusInput";
 
 interface KeyPressProps {
@@ -13,7 +14,9 @@ interface KeyPressProps {
 
 export function handleKeyPress({ key, metaKey }: KeyPressProps) {
   if (key.length === 1 && !metaKey) {
-    insertCharacterAtCaret(key);
+    if (key !== ")" || (key === ")" && getNextToken() !== ")")) {
+      insertCharacterAtCaret(key);
+    }
 
     if (key === "(") {
       handleOpenParenthesis();

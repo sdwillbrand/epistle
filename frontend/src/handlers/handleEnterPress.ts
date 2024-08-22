@@ -8,61 +8,105 @@ import { currentLineTextAtom } from "../atoms/currentLineTextAtom";
 import { currentLineIndexAtom } from "../atoms/currentLineIndexAtom";
 import { inputRefAtom } from "../atoms/inputRefAtom";
 import { refocusInput } from "../utils/refocusInput";
+import { getIndentLevel } from "../utils/getIndentLevel";
 
 export const handleEnterPress = () => {
   const openVerseSuggestion = editorStore.get(openVerseSuggestionAtom);
   const currentLineText = editorStore.get(currentLineTextAtom);
   const currentLineIndex = editorStore.get(currentLineIndexAtom);
   const inputRef = editorStore.get(inputRefAtom);
+
   if (!inputRef) return;
+
   const selectionStart = inputRef.selectionStart;
-  let nextLineText = "";
+
   if (!openVerseSuggestion) {
-    editorStore.set(editorLinesAtom, (prev) => {
-      let result = [...prev]; // Copy previous lines
-
-      // Case 1: At the beginning of the first line, insert a new line above
-      if (selectionStart === 0 && currentLineText) {
-        result.unshift(""); // Add an empty line at the beginning
-        nextLineText = currentLineText; // Set next content to the current line's text
-
-        // Case 2: Cursor is not at the start (in the middle of a line), split the current line
-      } else if (selectionStart !== 0) {
-        const beforeCursor = currentLineText.slice(0, selectionStart); // Text before cursor
-        const afterCursor = currentLineText.slice(selectionStart); // Text after cursor
-
-        // Update current line with text before the cursor
-        result[currentLineIndex] = beforeCursor;
-
-        // Insert new line with text after the cursor
-        result.splice(currentLineIndex + 1, 0, afterCursor);
-        nextLineText = afterCursor; // The newly created line's content is now the focus
-
-        // Case 3: At the start of a line that's not the first one, insert a new line above
-      } else {
-        result.splice(currentLineIndex + 1, 0, ""); // Insert empty line at the current index
-      }
-
-      return result;
-    });
-
-    let identLevel = 0;
-    for (const c of currentLineText) {
-      if (c !== "\t") {
-        break;
-      }
-      identLevel++;
-    }
-    const isList = currentLineText.match(/\s*(?=-\s*\w)/);
-    editorStore.set(
-      currentLineTextAtom,
-      "\t".repeat(identLevel) + (isList ? "- " : "") + nextLineText
-    );
-    editorStore.set(currentLineIndexAtom, (prev) => prev + 1);
-
-    refocusInput(0);
+    handleNewLineInsertion(selectionStart, currentLineText, currentLineIndex);
   } else {
-    editorStore.set(suggestionAtom, "");
-    editorStore.set(openVerseSuggestionAtom, false);
+    closeVerseSuggestion();
   }
 };
+
+// Handles inserting a new line depending on the cursor position
+function handleNewLineInsertion(
+  selectionStart: number,
+  currentLineText: string,
+  currentLineIndex: number
+) {
+  let nextLineText = "";
+
+  editorStore.set(editorLinesAtom, (prevLines) => {
+    let updatedLines = [...prevLines]; // Copy previous lines
+
+    if (isAtStartOfFirstLine(selectionStart, currentLineText)) {
+      // Case 1: At the beginning of the first line, insert a new line above
+      updatedLines.unshift(""); // Add an empty line at the beginning
+      nextLineText = currentLineText;
+    } else if (isCursorInMiddleOfLine(selectionStart)) {
+      // Case 2: Cursor is in the middle of a line, split the current line
+      updatedLines = splitLineAtCursor(
+        updatedLines,
+        selectionStart,
+        currentLineText,
+        currentLineIndex
+      );
+      nextLineText = currentLineText.slice(selectionStart); // Text after the cursor
+    } else {
+      // Case 3: At the start of a non-first line, insert a new line below
+      updatedLines.splice(currentLineIndex + 1, 0, ""); // Insert empty line at the current index
+    }
+
+    return updatedLines;
+  });
+
+  const position = adjustCurrentLineText(nextLineText, currentLineText);
+  editorStore.set(currentLineIndexAtom, (prev) => prev + 1);
+  refocusInput(position);
+}
+
+// Checks if the cursor is at the start of the first line
+function isAtStartOfFirstLine(
+  selectionStart: number,
+  currentLineText: string
+): boolean {
+  return selectionStart === 0 && currentLineText !== "";
+}
+
+// Checks if the cursor is in the middle of a line
+function isCursorInMiddleOfLine(selectionStart: number): boolean {
+  return selectionStart !== 0;
+}
+
+// Splits the current line at the cursor position
+function splitLineAtCursor(
+  lines: string[],
+  selectionStart: number,
+  currentLineText: string,
+  currentLineIndex: number
+): string[] {
+  const beforeCursor = currentLineText.slice(0, selectionStart);
+  const afterCursor = currentLineText.slice(selectionStart);
+
+  lines[currentLineIndex] = beforeCursor; // Update current line with text before the cursor
+  lines.splice(currentLineIndex + 1, 0, afterCursor); // Insert new line with text after the cursor
+
+  return lines;
+}
+
+// Adjusts the indentation and list formatting of the new line
+function adjustCurrentLineText(nextLineText: string, currentLineText: string) {
+  let indentLevel = getIndentLevel(currentLineText);
+  const isList = currentLineText.match(/\s*(?=-\s*\w)/);
+
+  editorStore.set(
+    currentLineTextAtom,
+    "\t".repeat(indentLevel) + (isList ? "- " : "") + nextLineText
+  );
+  return -1;
+}
+
+// Closes the verse suggestion box
+function closeVerseSuggestion() {
+  editorStore.set(suggestionAtom, "");
+  editorStore.set(openVerseSuggestionAtom, false);
+}
