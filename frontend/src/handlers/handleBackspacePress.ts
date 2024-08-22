@@ -72,6 +72,8 @@ function handleAltKeyBackspace() {
   const selectionStart = inputRef.selectionStart;
   if (selectionStart === 0 && currentLineIndex > 0) {
     handleLineMerge();
+  } else {
+    removeWord();
   }
 }
 
@@ -111,4 +113,33 @@ function handleLineMerge() {
   });
 
   refocusInput(newCaretPosition);
+}
+
+function removeWord() {
+  const inputRef = editorStore.get(inputRefAtom);
+  if (!inputRef) return;
+
+  const selectionStart = inputRef.selectionStart;
+  const currentLineText = editorStore.get(currentLineTextAtom);
+
+  let startingIndex = -1;
+  const isWhitespace = /\s/.test(currentLineText[selectionStart - 1]);
+  for (let i = selectionStart - 1; i > 0; i--) {
+    if (
+      (!/\s/.test(currentLineText[i]) && isWhitespace) ||
+      (/\s/.test(currentLineText[i]) && !isWhitespace)
+    ) {
+      startingIndex = i;
+      break;
+    }
+  }
+  if (startingIndex === -1) {
+    editorStore.set(currentLineTextAtom, currentLineText.slice(selectionStart));
+  } else {
+    editorStore.set(
+      currentLineTextAtom,
+      (prev) => prev.slice(0, startingIndex + 1) + prev.slice(selectionStart)
+    );
+  }
+  refocusInput(startingIndex + 1);
 }
