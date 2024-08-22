@@ -1,7 +1,6 @@
 import {
   openVerseSuggestionAtom,
   suggestionAtom,
-  verseSuggestionAtom,
 } from "../atoms/verseSuggestionAtom";
 import { editorLinesAtom } from "../atoms/editorLinesAtom";
 import { editorStore } from "../App";
@@ -11,7 +10,7 @@ import { inputRefAtom } from "../atoms/inputRefAtom";
 import { refocusInput } from "../utils/refocusInput";
 
 export const handleEnterPress = () => {
-  const { open: openVerseSuggestion } = editorStore.get(verseSuggestionAtom);
+  const openVerseSuggestion = editorStore.get(openVerseSuggestionAtom);
   const currentLineText = editorStore.get(currentLineTextAtom);
   const currentLineIndex = editorStore.get(currentLineIndexAtom);
   const inputRef = editorStore.get(inputRefAtom);

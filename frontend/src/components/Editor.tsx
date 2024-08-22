@@ -1,7 +1,7 @@
 import { useEffect, KeyboardEvent } from "react";
 import { useDebounce } from "use-debounce";
 import { useLineEditor } from "../hooks/useLineEditor";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import classNames from "classnames";
 import {
   ClipboardSetText,
@@ -10,7 +10,6 @@ import {
 import {
   openVerseSuggestionAtom,
   suggestionAtom,
-  verseSuggestionAtom,
   verseSuggestionIndexAtom,
 } from "../atoms/verseSuggestionAtom";
 import { LineDisplay } from "./LineDisplay";
@@ -20,6 +19,8 @@ import { currentLineTextAtom } from "../atoms/currentLineTextAtom";
 import { currentLineIndexAtom } from "../atoms/currentLineIndexAtom";
 import { handleEnterPress } from "../handlers/handleEnterPress";
 import { handleBackspacePress } from "../handlers/handleBackspacePress";
+import { handleKeyPress } from "../handlers/handleKeyPress";
+import { handleArrowDownPress } from "../handlers/handleArrowDownPress";
 
 export const Editor = () => {
   const {
@@ -27,10 +28,10 @@ export const Editor = () => {
     getCaretIndexAtPosition,
     measureText,
   } = useLineEditor();
-  const { open: openVerseSuggestion, index: suggestionIndex } =
-    useAtomValue(verseSuggestionAtom);
-  const setOpenVerseSuggestion = useSetAtom(openVerseSuggestionAtom);
-  const setVerseSuggestionIndex = useSetAtom(verseSuggestionIndexAtom);
+  const openVerseSuggestion = useAtomValue(openVerseSuggestionAtom);
+  const [suggestionIndex, setVerseSuggestionIndex] = useAtom(
+    verseSuggestionIndexAtom
+  );
   const [lines, setLines] = useAtom(editorLinesAtom);
   const [currentLineText, setCurrentLineText] = useAtom(currentLineTextAtom);
   const [currentLineIndex, setCurrentLineIndex] = useAtom(currentLineIndexAtom);
@@ -54,58 +55,10 @@ export const Editor = () => {
       handleEnterPress();
     } else if (key === "Backspace") {
       handleBackspacePress({ metaKey: event.metaKey, altKey: event.altKey });
-    } else if (key.length === 1 && !event.metaKey) {
-      setCurrentLineText((prev) => {
-        let next = "";
-        if (selectionStart !== 0) {
-          next =
-            prev.slice(0, selectionStart) + key + prev.slice(selectionStart);
-        } else {
-          next = key + prev;
-        }
-
-        return next;
-      });
-      if (key === "(") {
-        setOpenVerseSuggestion(true);
-        setCurrentLineText((prev) => {
-          const key = ")";
-          const next =
-            prev.slice(0, selectionStart + 1) +
-            key +
-            prev.slice(selectionStart + 1);
-          setLines((prev) => {
-            const result = [...prev];
-            result[currentLineIndex] = next;
-            return result;
-          });
-          return next;
-        });
-      }
-      setTimeout(() => {
-        inputRef.current!.setSelectionRange(
-          selectionStart + 1,
-          selectionStart + 1
-        );
-      }, 0);
+    } else if (key.length === 1) {
+      handleKeyPress({ key, metaKey: event.metaKey });
     } else if (key === "ArrowDown") {
-      event.preventDefault();
-      if (!openVerseSuggestion && currentLineIndex + 1 < lines.length) {
-        setCurrentLineIndex((prev) => {
-          const nextLine = prev + 1;
-          setCurrentLineText(lines[nextLine]);
-          setLines((prev) => {
-            const result = [...prev];
-            result[currentLineIndex] = currentLineText;
-            return result;
-          });
-          return nextLine;
-        });
-      } else {
-        setVerseSuggestionIndex(
-          suggestionIndex === undefined ? 0 : suggestionIndex + 1
-        );
-      }
+      handleArrowDownPress(event);
     } else if (key === "ArrowUp") {
       event.preventDefault();
       if (!openVerseSuggestion && currentLineIndex > 0) {

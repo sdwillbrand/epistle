@@ -25,12 +25,10 @@ export function handleBackspacePress({ metaKey, altKey }: BackspaceProps) {
 
 // Backspace on an empty line
 function handleEmptyLineBackspace() {
-  console.log("EMPTYLINE");
   const lines = editorStore.get(editorLinesAtom);
   const currentLineIndex = editorStore.get(currentLineIndexAtom);
   editorStore.set(currentLineIndexAtom, (prevIndex) => {
     const newIndex = Math.max(prevIndex - 1, 0);
-    console.log({ lines, newIndex });
     editorStore.set(currentLineTextAtom, lines[newIndex]);
 
     if (currentLineIndex > 0) {
