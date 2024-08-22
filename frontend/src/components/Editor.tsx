@@ -55,8 +55,6 @@ export const Editor = () => {
       handleEnterPress();
     } else if (key === "Backspace") {
       handleBackspacePress({ metaKey: event.metaKey, altKey: event.altKey });
-    } else if (key.length === 1) {
-      handleKeyPress({ key, metaKey: event.metaKey });
     } else if (key === "ArrowDown") {
       handleArrowDownPress(event);
     } else if (key === "ArrowUp") {
@@ -180,6 +178,8 @@ export const Editor = () => {
           selectionStart + copiedText.length
         );
       }, 0);
+    } else if (key.length === 1) {
+      handleKeyPress({ key, metaKey: event.metaKey });
     }
     // else if (
     //   key === "z" &&
