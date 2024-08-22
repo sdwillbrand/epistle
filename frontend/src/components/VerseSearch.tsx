@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import classNames from "classnames";
 import Fuse, { IFuseOptions } from "fuse.js";
 import { useSetAtom } from "jotai";
-import { openVerseSuggestionAtom } from "../atoms";
+import { openVerseSuggestionAtom } from "../atoms/verseSuggestionAtom";
 import L1545 from "../L1545";
 
 interface Props extends React.HTMLAttributes<HTMLDivElement> {
@@ -71,6 +71,7 @@ export const VerseSuggestion = ({
     []
   );
   const setOpenVerseSuggestion = useSetAtom(openVerseSuggestionAtom);
+
   useEffect(() => {
     const result = new Fuse(suggestions, fuseOptions)
       .search(input)

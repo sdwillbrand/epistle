@@ -1,16 +1,24 @@
-import { MutableRefObject, useEffect, useRef } from "react";
+import { useAtom, useSetAtom } from "jotai";
+import { useEffect, useRef } from "react";
+import { inputRefAtom } from "../atoms/inputRefAtom";
 
-export function useTextWidth(
-  inputRef: MutableRefObject<HTMLTextAreaElement | null>
-) {
+export function useLineEditor() {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+  const [inputRef, setInputRef] = useAtom(inputRefAtom);
   const canvasRef = useRef<CanvasRenderingContext2D | null>(null);
   useEffect(() => {
     if (!canvasRef.current)
       canvasRef.current = document.createElement("canvas").getContext("2d");
   }, []);
 
+  useEffect(() => {
+    if (ref.current && !inputRef) {
+      setInputRef(ref.current);
+    }
+  }, [ref]);
+
   const getCaretIndexAtPosition = (relativeX: number) => {
-    const input = inputRef.current;
+    const input = ref.current;
     if (!input) return -1;
     const canvas = canvasRef.current;
     if (!canvas) {
@@ -40,7 +48,7 @@ export function useTextWidth(
 
   const measureText = (text: string) => {
     const canvas = canvasRef.current;
-    const input = inputRef.current;
+    const input = ref.current;
     if (!input) return 0;
     if (!canvas) {
       console.log("no canvas");
@@ -57,5 +65,5 @@ export function useTextWidth(
     }
     return totalWidth;
   };
-  return { getCaretIndexAtPosition, measureText };
+  return { ref: ref, getCaretIndexAtPosition, measureText };
 }

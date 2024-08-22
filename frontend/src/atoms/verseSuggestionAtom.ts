@@ -1,4 +1,4 @@
-import { atom, SetStateAction } from "jotai";
+import { atom } from "jotai";
 
 interface VerseSuggestion {
   index?: number;
@@ -7,13 +7,17 @@ interface VerseSuggestion {
 
 export const indexAtom = atom<number | undefined>(undefined);
 export const openAtom = atom<boolean>(false);
+export const suggestionAtom = atom<string>("");
 
 export const verseSuggestionAtom = atom<
   VerseSuggestion,
   [VerseSuggestion],
   void
 >(
-  (get) => ({ index: get(indexAtom), open: get(openAtom) }),
+  (get) => ({
+    index: get(indexAtom),
+    open: get(openAtom),
+  }),
   (get, set, newVerseSuggestion) => {
     const open = get(openAtom);
     set(indexAtom, open ? newVerseSuggestion.index : undefined);
