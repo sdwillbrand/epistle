@@ -21,6 +21,7 @@ import { handleEnterPress } from "../handlers/handleEnterPress";
 import { handleBackspacePress } from "../handlers/handleBackspacePress";
 import { handleKeyPress } from "../handlers/handleKeyPress";
 import { handleArrowDownPress } from "../handlers/handleArrowDownPress";
+import { handleArrowUpPress } from "../handlers/handleArrowUpPress";
 
 export const Editor = () => {
   const {
@@ -58,23 +59,7 @@ export const Editor = () => {
     } else if (key === "ArrowDown") {
       handleArrowDownPress(event);
     } else if (key === "ArrowUp") {
-      event.preventDefault();
-      if (!openVerseSuggestion && currentLineIndex > 0) {
-        setCurrentLineIndex((prev) => {
-          const nextLine = Math.max(prev - 1, 0);
-          setCurrentLineText(lines[nextLine]);
-          setLines((prev) => {
-            const result = [...prev];
-            result[currentLineIndex] = currentLineText;
-            return result;
-          });
-          return nextLine;
-        });
-      } else {
-        setVerseSuggestionIndex(
-          suggestionIndex === undefined ? 0 : Math.max(suggestionIndex - 1, 0)
-        );
-      }
+      handleArrowUpPress(event);
     } else if (
       key === "ArrowLeft" &&
       currentLineIndex > 0 &&
