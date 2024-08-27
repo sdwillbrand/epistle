@@ -12,7 +12,7 @@ export const BibleVerse = ({
 
   return (
     <span
-      className="text-amber-500 cursor-pointer"
+      className="text-amber-500 cursor-pointer relative"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

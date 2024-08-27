@@ -91,7 +91,7 @@ export const VerseSuggestion = ({
           style={style}
           className={classNames(
             className,
-            "max-h-56 overflow-scroll mt-1 border absolute pl-1 pr-4"
+            "max-h-56 overflow-scroll mt-1 border absolute pl-1 pr-4 z-30"
           )}
           hidden={hidden}
           tabIndex={1}

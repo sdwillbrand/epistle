@@ -2,9 +2,11 @@ import { KeyboardEvent } from "react";
 import { editorStore } from "../App";
 import { currentLineIndexAtom } from "../atoms/currentLineIndexAtom";
 import { currentLineTextAtom } from "../atoms/currentLineTextAtom";
-import { cursorPositionAtom } from "../atoms/cursorPositionAtom";
 import { editorLinesAtom } from "../atoms/editorLinesAtom";
-import { openVerseSuggestionAtom } from "../atoms/verseSuggestionAtom";
+import {
+  openVerseSuggestionAtom,
+  verseSuggestionIndexAtom,
+} from "../atoms/verseSuggestionAtom";
 
 export const handleArrowUpPress = (event: KeyboardEvent) => {
   event.preventDefault();
@@ -13,12 +15,11 @@ export const handleArrowUpPress = (event: KeyboardEvent) => {
   const currentLineIndex = editorStore.get(currentLineIndexAtom);
   const currentLineText = editorStore.get(currentLineTextAtom);
   const lines = editorStore.get(editorLinesAtom);
-  const suggestionIndex = editorStore.get(cursorPositionAtom);
 
   if (!openVerseSuggestion) {
     handleArrowUpNavigation(currentLineIndex, currentLineText, lines);
   } else {
-    navigateVerseSuggestion(suggestionIndex);
+    navigateVerseSuggestion();
   }
 };
 
@@ -58,8 +59,8 @@ function updateLineContent(
 }
 
 // Handles navigating the verse suggestions when open
-function navigateVerseSuggestion(suggestionIndex: number | undefined) {
-  editorStore.set(cursorPositionAtom, (prevIndex) =>
-    suggestionIndex === undefined ? 0 : Math.max(prevIndex - 1, 0)
+function navigateVerseSuggestion() {
+  editorStore.set(verseSuggestionIndexAtom, (prevIndex) =>
+    prevIndex === undefined ? 0 : Math.max(prevIndex - 1, 0)
   );
 }
