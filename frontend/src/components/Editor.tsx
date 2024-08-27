@@ -1,7 +1,7 @@
 import { useEffect, KeyboardEvent } from "react";
 import { useDebounce } from "use-debounce";
 import { useLineEditor } from "../hooks/useLineEditor";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import classNames from "classnames";
 import {
   ClipboardSetText,
@@ -22,6 +22,14 @@ import { handleBackspacePress } from "../handlers/handleBackspacePress";
 import { handleKeyPress } from "../handlers/handleKeyPress";
 import { handleArrowDownPress } from "../handlers/handleArrowDownPress";
 import { handleArrowUpPress } from "../handlers/handleArrowUpPress";
+import { handleArrowLeftPress } from "../handlers/handleArrowLeftPress";
+import { handleArrowRightPress } from "../handlers/handleArrowRightPress";
+import { cursorPositionAtom } from "../atoms/cursorPositionAtom";
+import { useEventListener } from "usehooks-ts";
+import { handleTabPress } from "../handlers/handleTabPress";
+import { handleCopy } from "../handlers/handleCopy";
+import { handleCut } from "../handlers/handleCut";
+import { handlePaste } from "../handlers/handlePaste";
 
 export const Editor = () => {
   const {
@@ -36,6 +44,7 @@ export const Editor = () => {
   const [lines, setLines] = useAtom(editorLinesAtom);
   const [currentLineText, setCurrentLineText] = useAtom(currentLineTextAtom);
   const [currentLineIndex, setCurrentLineIndex] = useAtom(currentLineIndexAtom);
+  const setCursorPosition = useSetAtom(cursorPositionAtom);
   const [suggestion, setSuggestion] = useAtom(suggestionAtom);
   const [debouncedValue] = useDebounce(currentLineText, 200);
 
@@ -47,6 +56,15 @@ export const Editor = () => {
       setSuggestion(result[0].slice(1, -1)); // Extract the suggestion by removing the parenthesis
     }
   }, [debouncedValue]);
+
+  useEventListener(
+    "keydown",
+    (event) => {
+      const { selectionStart } = event.target as HTMLTextAreaElement;
+      setCursorPosition(selectionStart);
+    },
+    inputRef
+  );
 
   const handleKeys = async (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (!inputRef.current) return;
@@ -60,109 +78,18 @@ export const Editor = () => {
       handleArrowDownPress(event);
     } else if (key === "ArrowUp") {
       handleArrowUpPress(event);
-    } else if (
-      key === "ArrowLeft" &&
-      currentLineIndex > 0 &&
-      selectionStart === 0
-    ) {
-      setCurrentLineIndex((prev) => {
-        const nextLine = Math.max(prev - 1, 0);
-        setCurrentLineText(lines[nextLine]);
-        return nextLine;
-      });
-      setTimeout(() => {
-        inputRef.current!.focus();
-        inputRef.current!.setSelectionRange(-1, -1);
-      }, 0);
-    } else if (
-      key === "ArrowRight" &&
-      currentLineIndex < lines.length - 1 &&
-      selectionStart === currentLineText.length
-    ) {
-      setCurrentLineIndex((prev) => {
-        const nextLine = prev + 1;
-        setCurrentLineText(lines[nextLine]);
-        setLines((prev) => {
-          const result = [...prev];
-          result[currentLineIndex] = currentLineText;
-          return result;
-        });
-        return nextLine;
-      });
+    } else if (key === "ArrowLeft") {
+      handleArrowLeftPress();
+    } else if (key === "ArrowRight") {
+      handleArrowRightPress();
     } else if (key === "Tab") {
-      setCurrentLineText((prev) => {
-        let next = prev;
-        const key = "\t";
-        const isList = currentLineText.match(/^[\t ]*(?=-\s)/);
-        if (selectionStart !== 0 && !isList && !event.shiftKey) {
-          next =
-            prev.slice(0, selectionStart) + key + prev.slice(selectionStart);
-        } else if (!event.shiftKey) {
-          next = key + prev;
-        } else if (prev.match(/^\s+/) && event.shiftKey) {
-          next = prev.slice(1);
-        }
-        return next;
-      });
-      setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current!.setSelectionRange(
-          selectionStart + 1,
-          selectionStart + 1
-        );
-      }, 0);
+      handleTabPress({ shiftKey: event.shiftKey });
     } else if (key === "c" && event.metaKey) {
-      const { selectionStart, selectionEnd } = inputRef.current;
-      const selectedText = currentLineText.slice(selectionStart, selectionEnd);
-      await ClipboardSetText(selectedText);
+      await handleCopy(selectionStart, selectionEnd);
     } else if (key === "x" && event.metaKey) {
-      const { selectionStart, selectionEnd } = inputRef.current;
-      let selectedText = "";
-      if (selectionStart === selectionEnd) {
-        selectedText = currentLineText;
-        setCurrentLineText(() => {
-          const next = currentLineIndex > 0 ? lines[currentLineIndex - 1] : "";
-          setLines((prev) => [
-            ...prev.slice(0, currentLineIndex - 1),
-            ...prev.slice(currentLineIndex),
-          ]);
-          setCurrentLineIndex((prev) => Math.max(prev - 1, 0));
-          return next;
-        });
-      } else {
-        selectedText = currentLineText.slice(selectionStart, selectionEnd);
-        setCurrentLineText((prev) => {
-          const next = prev.slice(0, selectionStart) + prev.slice(selectionEnd);
-          return next;
-        });
-      }
-      await ClipboardSetText(selectedText);
+      await handleCut(selectionStart, selectionEnd);
     } else if (key === "v" && event.metaKey) {
-      const copiedText = await ClipboardGetText();
-      setCurrentLineText((prev) => {
-        let next = "";
-        if (selectionStart !== 0) {
-          next =
-            prev.slice(0, selectionStart) +
-            copiedText +
-            prev.slice(selectionStart);
-        } else {
-          next = copiedText + prev;
-        }
-        setLines((prev) => {
-          const result = [...prev];
-          result[currentLineIndex] = next;
-          return result;
-        });
-        return next;
-      });
-      setTimeout(() => {
-        inputRef.current!.focus();
-        inputRef.current!.setSelectionRange(
-          selectionStart + copiedText.length,
-          selectionStart + copiedText.length
-        );
-      }, 0);
+      await handlePaste();
     } else if (key.length === 1) {
       handleKeyPress({ key, metaKey: event.metaKey });
     }
