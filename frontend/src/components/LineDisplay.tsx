@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import L1545 from "../L1545";
 import { tokenizeText } from "../utils/tokenizeText";
 import { BibleVerse } from "./BibleVerse";
+import classNames from "classnames";
 
 interface Props {
   line: string;
@@ -9,6 +9,8 @@ interface Props {
 
 export const LineDisplay = ({ line }: Props) => {
   const tokens = useMemo(() => tokenizeText(line), [line]);
+
+  const isTitle = useMemo(() => line.startsWith("# "), [line]);
 
   return (
     <div className="relative">
@@ -23,7 +25,7 @@ export const LineDisplay = ({ line }: Props) => {
           );
         } else {
           return (
-            <span key={index}>
+            <span key={index} className={classNames({ "text-3xl": isTitle })}>
               {[...token.content].map((c, i) =>
                 c === "\t" ? <span key={c + i}>&emsp;</span> : c
               )}

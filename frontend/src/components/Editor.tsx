@@ -4,10 +4,6 @@ import { useLineEditor } from "../hooks/useLineEditor";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import classNames from "classnames";
 import {
-  ClipboardSetText,
-  ClipboardGetText,
-} from "../../wailsjs/runtime/runtime";
-import {
   openVerseSuggestionAtom,
   suggestionAtom,
   verseSuggestionIndexAtom,
@@ -184,7 +180,7 @@ export const Editor = () => {
       <textarea
         ref={inputRef}
         onKeyDown={handleKeys}
-        className="bg-black text-white outline-none resize-none overflow-hidden z-10 absolute w-full shadow-sm caret-amber-500"
+        className="bg-black text-white outline-none resize-none overflow-hidden z-10 absolute w-full shadow-sm caret-amber-500 text-base"
         style={{ top: `${currentLineIndex * 20}px`, height: "24px" }}
         value={currentLineText}
       />
