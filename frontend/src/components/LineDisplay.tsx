@@ -10,8 +10,6 @@ interface Props {
 export const LineDisplay = ({ line }: Props) => {
   const tokens = useMemo(() => tokenizeText(line), [line]);
 
-  const isTitle = useMemo(() => line.startsWith("# "), [line]);
-
   return (
     <div className="relative">
       {tokens.map((token, index) => {
@@ -25,7 +23,7 @@ export const LineDisplay = ({ line }: Props) => {
           );
         } else {
           return (
-            <span key={index} className={classNames({ "text-3xl": isTitle })}>
+            <span key={index}>
               {[...token.content].map((c, i) =>
                 c === "\t" ? <span key={c + i}>&emsp;</span> : c
               )}

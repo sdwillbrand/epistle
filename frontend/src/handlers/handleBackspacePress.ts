@@ -61,7 +61,15 @@ function handleRegularBackspace() {
 
 // Backspace with Meta key, clearing the entire line
 function handleMetaKeyBackspace() {
-  editorStore.set(currentLineTextAtom, "");
+  const currentLineIndex = editorStore.get(currentLineIndexAtom);
+  const lines = editorStore.get(editorLinesAtom);
+  editorStore.set(currentLineTextAtom, () => {
+    editorStore.set(editorLinesAtom, (prev) => {
+      prev[currentLineIndex] = "";
+      return prev;
+    });
+    return "";
+  });
 }
 
 // Backspace with Alt key, merging the current line with the previous one
@@ -121,6 +129,7 @@ function removeWord() {
 
   const selectionStart = inputRef.selectionStart;
   const currentLineText = editorStore.get(currentLineTextAtom);
+  const currentLineIndex = editorStore.get(currentLineIndexAtom);
 
   let startingIndex = -1;
   const isWhitespace = /\s/.test(currentLineText[selectionStart - 1]);
@@ -134,7 +143,14 @@ function removeWord() {
     }
   }
   if (startingIndex === -1) {
-    editorStore.set(currentLineTextAtom, currentLineText.slice(selectionStart));
+    editorStore.set(currentLineTextAtom, () => {
+      editorStore.set(editorLinesAtom, (prev) => {
+        prev[currentLineIndex] = "";
+        return prev;
+      });
+      return "";
+      return currentLineText.slice(selectionStart);
+    });
   } else {
     editorStore.set(
       currentLineTextAtom,

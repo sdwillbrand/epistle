@@ -79,6 +79,7 @@ export const Editor = () => {
     } else if (key === "ArrowRight") {
       handleArrowRightPress();
     } else if (key === "Tab") {
+      event.preventDefault();
       handleTabPress({ shiftKey: event.shiftKey });
     } else if (key === "c" && event.metaKey) {
       await handleCopy(selectionStart, selectionEnd);

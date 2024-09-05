@@ -41,10 +41,10 @@ for (const book of books) {
     >;
 
     // Iterate over each verse and create suggestions
-    for (const verse of verses) {
-      // Add a suggestion to the array in the format "Book Chapter:Verse"
-      suggestions.push(`${book} ${chapter}.${verse}`);
-    }
+    // for (const verse of verses) {
+    //   // Add a suggestion to the array in the format "Book Chapter:Verse"
+    //   suggestions.push(`${book} ${chapter}.${verse}`);
+    // }
     suggestions.push(`${book} ${chapter}`);
   }
   suggestions.push(book);
