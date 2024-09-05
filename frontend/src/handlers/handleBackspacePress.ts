@@ -61,15 +61,19 @@ function handleRegularBackspace() {
 
 // Backspace with Meta key, clearing the entire line
 function handleMetaKeyBackspace() {
+  const inputRef = editorStore.get(inputRefAtom);
+  if (!inputRef) return;
+  const selectionStart = inputRef.selectionStart;
   const currentLineIndex = editorStore.get(currentLineIndexAtom);
-  const lines = editorStore.get(editorLinesAtom);
-  editorStore.set(currentLineTextAtom, () => {
+  editorStore.set(currentLineTextAtom, (prevText) => {
+    const nextText = prevText.slice(selectionStart);
     editorStore.set(editorLinesAtom, (prev) => {
-      prev[currentLineIndex] = "";
+      prev[currentLineIndex] = nextText;
       return prev;
     });
-    return "";
+    return nextText;
   });
+  refocusInput(0);
 }
 
 // Backspace with Alt key, merging the current line with the previous one
@@ -144,12 +148,12 @@ function removeWord() {
   }
   if (startingIndex === -1) {
     editorStore.set(currentLineTextAtom, () => {
+      const nextText = currentLineText.slice(selectionStart);
       editorStore.set(editorLinesAtom, (prev) => {
-        prev[currentLineIndex] = "";
+        prev[currentLineIndex] = nextText;
         return prev;
       });
-      return "";
-      return currentLineText.slice(selectionStart);
+      return nextText;
     });
   } else {
     editorStore.set(

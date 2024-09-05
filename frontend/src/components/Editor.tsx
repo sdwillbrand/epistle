@@ -62,18 +62,24 @@ export const Editor = () => {
     inputRef
   );
 
+  useEffect(() => {
+    console.log({ currentLineText });
+  }, [currentLineText]);
+
   const handleKeys = async (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (!inputRef.current) return;
     const key = event.key;
-    const { selectionStart, selectionEnd } = inputRef.current;
     if (key === "Enter") {
+      event.preventDefault();
+      console.log("ENTER");
       handleEnterPress();
     } else if (key === "Backspace") {
+      event.preventDefault();
       handleBackspacePress({ metaKey: event.metaKey, altKey: event.altKey });
     } else if (key === "ArrowDown") {
-      handleArrowDownPress(event);
+      handleArrowDownPress(event, 1);
     } else if (key === "ArrowUp") {
-      handleArrowUpPress(event);
+      handleArrowDownPress(event, -1);
     } else if (key === "ArrowLeft") {
       handleArrowLeftPress();
     } else if (key === "ArrowRight") {
@@ -81,55 +87,40 @@ export const Editor = () => {
     } else if (key === "Tab") {
       event.preventDefault();
       handleTabPress({ shiftKey: event.shiftKey });
-    } else if (key === "c" && event.metaKey) {
-      await handleCopy(selectionStart, selectionEnd);
-    } else if (key === "x" && event.metaKey) {
-      await handleCut(selectionStart, selectionEnd);
-    } else if (key === "v" && event.metaKey) {
-      await handlePaste();
-    } else if (key.length === 1) {
-      handleKeyPress({ key, metaKey: event.metaKey });
     }
-    // else if (
-    //   key === "z" &&
-    //   event.metaKey &&
-    //   !event.shiftKey &&
-    //   currentLineIndex !== null &&
-    //   currentStateIndex[currentLineIndex] > 0
-    // ) {
-    //   const updatedStateIndexes = [...currentStateIndex];
-    //   updatedStateIndexes[currentLineIndex] -= 1;
+  };
 
-    //   setCurrentStateIndex(updatedStateIndexes);
-    //   setCurrentLineText(
-    //     history[currentLineIndex][updatedStateIndexes[currentLineIndex]]
-    //   );
+  const handleLineClick = (lineIndex: number, posX: number) => {
+    setLines((prev) => {
+      const result = [...prev];
+      result[currentLineIndex] = currentLineText;
+      return result;
+    });
+    setCurrentLineIndex(lineIndex);
+    setCurrentLineText(lines[lineIndex]);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 1);
+    // Optimized text width measurement using canvas
 
-    //   const updatedLines = [...lines];
-    //   updatedLines[currentLineIndex] =
-    //     history[currentLineIndex][updatedStateIndexes[currentLineIndex]];
-    //   setLines(updatedLines);
-    // }
+    setTimeout(() => {
+      if (inputRef.current) {
+        const input = inputRef.current;
 
-    // const updatedLines = [...lines];
-    // updatedLines[currentLineIndex] = currentLineText;
+        // Focus the input
+        input.focus();
 
-    // // Update the history for the current line
-    // const updatedHistory = [...history];
-    // const newHistory = updatedHistory[currentLineIndex].slice(
-    //   0,
-    //   currentStateIndex[currentLineIndex] + 1
-    // );
-    // newHistory.push(currentLineText);
-    // updatedHistory[currentLineIndex] = newHistory;
+        // Calculate the mouse position relative to the input element
+        const { left } = input.getBoundingClientRect();
+        const relativeX = posX - left;
 
-    // // Update the state index for the current line
-    // const updatedStateIndexes = [...currentStateIndex];
-    // updatedStateIndexes[currentLineIndex] = newHistory.length - 1;
+        // Find the character index at the mouse position
+        const position = getCaretIndexAtPosition(relativeX);
 
-    // setLines(updatedLines);
-    // setHistory(updatedHistory);
-    // setCurrentStateIndex(updatedStateIndexes);
+        // Set the caret position
+        input.setSelectionRange(position, position);
+      }
+    }, 1);
   };
 
   return (
@@ -137,43 +128,12 @@ export const Editor = () => {
       {lines.map((line, i) => (
         <div
           className={classNames("absolute w-full flex", {
-            hidden: i === currentLineIndex,
+            invisible: i === currentLineIndex,
           })}
           key={i}
           style={{ top: `${i * 20}px`, minHeight: "20px" }}
-          onClick={(e) => {
-            setLines((prev) => {
-              const result = [...prev];
-              result[currentLineIndex] = currentLineText;
-              return result;
-            });
-            setCurrentLineIndex(i);
-            setCurrentLineText(lines[i]);
-            setTimeout(() => {
-              inputRef.current?.focus();
-            }, 1);
-            const mouseX = e.clientX;
-            // Optimized text width measurement using canvas
-
-            setTimeout(() => {
-              if (inputRef.current) {
-                const input = inputRef.current;
-
-                // Focus the input
-                input.focus();
-
-                // Calculate the mouse position relative to the input element
-                const { left } = input.getBoundingClientRect();
-                const relativeX = mouseX - left;
-
-                // Find the character index at the mouse position
-                const position = getCaretIndexAtPosition(relativeX);
-
-                // Set the caret position
-                input.setSelectionRange(position, position);
-              }
-            }, 1);
-          }}
+          contentEditable
+          onClick={(e) => handleLineClick(i, e.clientX)}
         >
           <LineDisplay line={line} />
         </div>
@@ -181,11 +141,14 @@ export const Editor = () => {
       <textarea
         ref={inputRef}
         onKeyDown={handleKeys}
+        onInput={(e) => setCurrentLineText(e.currentTarget.value)}
         className="bg-black text-white outline-none resize-none overflow-hidden z-10 absolute w-full shadow-sm caret-amber-500 text-base"
         style={{ top: `${currentLineIndex * 20}px`, height: "24px" }}
         value={currentLineText}
+        contentEditable
+        suppressContentEditableWarning
       />
-      <VerseSuggestion
+      {/* <VerseSuggestion
         hidden={!openVerseSuggestion}
         input={suggestion}
         selectedIndex={suggestionIndex}
@@ -195,7 +158,7 @@ export const Editor = () => {
             currentLineText.slice(0, inputRef.current?.selectionStart ?? 0)
           )}px`,
         }}
-      />
+      /> */}
     </div>
   );
 };

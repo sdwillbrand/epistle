@@ -1,4 +1,5 @@
 import L1545 from "../L1545";
+import BibleBookMappings from "../BibleBookMappings";
 
 export const tokenizeText = (text: string) => {
   const bibleVerseRegex = /(\(\b(\d\.)?\s?[A-Za-zäöüÄÖÜß]+(\.)?\s\d+.\d+\b\))/g;
@@ -25,9 +26,11 @@ export const tokenizeText = (text: string) => {
       const book = extractedVerse[1];
       const chapter = extractedVerse[3];
       const verse = extractedVerse[4];
+      const mappedBook = BibleBookMappings[book];
+      console.log({ book, mappedBook });
       const foundVerse =
-        L1545[book] && L1545[book][chapter]
-          ? L1545[book][chapter][verse]
+        L1545[mappedBook] && L1545[mappedBook][chapter]
+          ? L1545[mappedBook][chapter][verse]
           : null;
       if (!foundVerse) {
         continue;

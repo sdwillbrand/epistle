@@ -8,43 +8,37 @@ import { editorLinesAtom } from "../atoms/editorLinesAtom";
 import { currentLineIndexAtom } from "../atoms/currentLineIndexAtom";
 import { currentLineTextAtom } from "../atoms/currentLineTextAtom";
 
-export function handleArrowDownPress(event: KeyboardEvent) {
+export function handleArrowDownPress(event: KeyboardEvent, dir: -1 | 1) {
   event.preventDefault();
   const openVerseSuggestion = editorStore.get(openVerseSuggestionAtom);
   if (!openVerseSuggestion) {
-    moveToNextLine();
+    moveToNextLine(dir);
   } else {
     navigateVerseSuggestions();
   }
 }
 
 // Handles moving to the next line
-function moveToNextLine() {
+function moveToNextLine(dir: -1 | 1) {
   const lines = editorStore.get(editorLinesAtom);
   const currentLineIndex = editorStore.get(currentLineIndexAtom);
   const currentLineText = editorStore.get(currentLineTextAtom);
-  if (currentLineIndex + 1 < lines.length) {
+  if (currentLineIndex + dir < lines.length && currentLineIndex + dir >= 0) {
     editorStore.set(currentLineIndexAtom, (prevIndex) => {
-      const nextLineIndex = prevIndex + 1;
+      const nextLineIndex = prevIndex + dir;
       const nextLineText = lines[nextLineIndex];
 
       editorStore.set(currentLineTextAtom, nextLineText);
 
-      editorStore.set(editorLinesAtom, (prevLines) =>
-        updateCurrentLine(prevLines, currentLineText)
-      );
+      editorStore.set(editorLinesAtom, (lines) => {
+        const updatedLines = [...lines];
+        updatedLines[currentLineIndex] = currentLineText;
+        return updatedLines;
+      });
 
       return nextLineIndex;
     });
   }
-}
-
-// Updates the current line in the lines array
-function updateCurrentLine(lines: string[], updatedText: string): string[] {
-  const currentLineIndex = editorStore.get(currentLineIndexAtom);
-  const updatedLines = [...lines];
-  updatedLines[currentLineIndex] = updatedText;
-  return updatedLines;
 }
 
 // Navigates through verse suggestions
