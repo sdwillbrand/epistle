@@ -1,8 +1,7 @@
-import { editorStore } from "../App";
-import { currentLineIndexAtom } from "../atoms/currentLineIndexAtom";
-import { currentLineTextAtom } from "../atoms/currentLineTextAtom";
-import { cursorPositionAtom } from "../atoms/cursorPositionAtom";
-import { editorLinesAtom } from "../atoms/editorLinesAtom";
+import { editorStore } from "@/App";
+import { currentLineIndexAtom } from "@/atoms/currentLineIndexAtom";
+import { cursorPositionAtom } from "@/atoms/cursorPositionAtom";
+import { currentLineTextAtom, editorLinesAtom } from "@/atoms/filesAtom";
 
 export function handleArrowRightPress() {
   const currentLineIndex = editorStore.get(currentLineIndexAtom);
@@ -16,11 +15,6 @@ export function handleArrowRightPress() {
     editorStore.set(currentLineIndexAtom, (prev) => {
       const nextLine = prev + 1;
       editorStore.set(currentLineTextAtom, lines[nextLine]);
-      editorStore.set(editorLinesAtom, (prev) => {
-        const result = [...prev];
-        result[currentLineIndex] = currentLineText;
-        return result;
-      });
       return nextLine;
     });
   }

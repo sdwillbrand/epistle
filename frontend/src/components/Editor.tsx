@@ -1,31 +1,24 @@
-import { useEffect, KeyboardEvent } from "react";
-import { useDebounce } from "use-debounce";
-import { useLineEditor } from "../hooks/useLineEditor";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import classNames from "classnames";
+import { currentLineIndexAtom } from "@/atoms/currentLineIndexAtom";
+import { cursorPositionAtom } from "@/atoms/cursorPositionAtom";
 import {
   openVerseSuggestionAtom,
-  suggestionAtom,
   verseSuggestionIndexAtom,
-} from "../atoms/verseSuggestionAtom";
-import { LineDisplay } from "./LineDisplay";
-import { VerseSuggestion } from "./VerseSearch";
-import { editorLinesAtom } from "../atoms/editorLinesAtom";
-import { currentLineTextAtom } from "../atoms/currentLineTextAtom";
-import { currentLineIndexAtom } from "../atoms/currentLineIndexAtom";
-import { handleEnterPress } from "../handlers/handleEnterPress";
-import { handleBackspacePress } from "../handlers/handleBackspacePress";
-import { handleKeyPress } from "../handlers/handleKeyPress";
-import { handleArrowDownPress } from "../handlers/handleArrowDownPress";
-import { handleArrowUpPress } from "../handlers/handleArrowUpPress";
-import { handleArrowLeftPress } from "../handlers/handleArrowLeftPress";
-import { handleArrowRightPress } from "../handlers/handleArrowRightPress";
-import { cursorPositionAtom } from "../atoms/cursorPositionAtom";
+  suggestionAtom,
+} from "@/atoms/verseSuggestionAtom";
+import { handleArrowDownPress } from "@/handlers/handleArrowDownPress";
+import { handleArrowLeftPress } from "@/handlers/handleArrowLeftPress";
+import { handleArrowRightPress } from "@/handlers/handleArrowRightPress";
+import { handleBackspacePress } from "@/handlers/handleBackspacePress";
+import { handleEnterPress } from "@/handlers/handleEnterPress";
+import { handleTabPress } from "@/handlers/handleTabPress";
+import { useLineEditor } from "@/hooks/useLineEditor";
+import classNames from "classnames";
+import { useAtomValue, useAtom, useSetAtom } from "jotai";
+import { useEffect, KeyboardEvent } from "react";
+import { useDebounce } from "use-debounce";
 import { useEventListener } from "usehooks-ts";
-import { handleTabPress } from "../handlers/handleTabPress";
-import { handleCopy } from "../handlers/handleCopy";
-import { handleCut } from "../handlers/handleCut";
-import { handlePaste } from "../handlers/handlePaste";
+import { LineDisplay } from "./LineDisplay";
+import { currentLineTextAtom, editorLinesAtom } from "@/atoms/filesAtom";
 
 export const Editor = () => {
   const {
@@ -63,15 +56,14 @@ export const Editor = () => {
   );
 
   useEffect(() => {
-    console.log({ currentLineText });
-  }, [currentLineText]);
+    console.log({ lines });
+  }, [lines]);
 
   const handleKeys = async (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (!inputRef.current) return;
     const key = event.key;
     if (key === "Enter") {
       event.preventDefault();
-      console.log("ENTER");
       handleEnterPress();
     } else if (key === "Backspace") {
       event.preventDefault();
@@ -91,13 +83,13 @@ export const Editor = () => {
   };
 
   const handleLineClick = (lineIndex: number, posX: number) => {
-    setLines((prev) => {
-      const result = [...prev];
+    setLines((prevLines: string[]) => {
+      const result = [...prevLines];
       result[currentLineIndex] = currentLineText;
       return result;
     });
     setCurrentLineIndex(lineIndex);
-    setCurrentLineText(lines[lineIndex]);
+    // setCurrentLineText(lines[lineIndex]);
     setTimeout(() => {
       inputRef.current?.focus();
     }, 1);

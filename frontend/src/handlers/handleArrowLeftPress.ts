@@ -1,9 +1,8 @@
-import { editorStore } from "../App";
-import { currentLineIndexAtom } from "../atoms/currentLineIndexAtom";
-import { currentLineTextAtom } from "../atoms/currentLineTextAtom";
-import { cursorPositionAtom } from "../atoms/cursorPositionAtom";
-import { editorLinesAtom } from "../atoms/editorLinesAtom";
-import { refocusInput } from "../utils/refocusInput";
+import { editorStore } from "@/App";
+import { currentLineIndexAtom } from "@/atoms/currentLineIndexAtom";
+import { cursorPositionAtom } from "@/atoms/cursorPositionAtom";
+import { currentLineTextAtom, editorLinesAtom } from "@/atoms/filesAtom";
+import { refocusInput } from "@/utils/refocusInput";
 
 export function handleArrowLeftPress() {
   const currentLineIndex = editorStore.get(currentLineIndexAtom);

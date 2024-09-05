@@ -1,9 +1,8 @@
-import { editorStore } from "../App";
-import { currentLineIndexAtom } from "../atoms/currentLineIndexAtom";
-import { currentLineTextAtom } from "../atoms/currentLineTextAtom";
-import { editorLinesAtom } from "../atoms/editorLinesAtom";
-import { inputRefAtom } from "../atoms/inputRefAtom";
-import { refocusInput } from "../utils/refocusInput";
+import { editorStore } from "@/App";
+import { currentLineIndexAtom } from "@/atoms/currentLineIndexAtom";
+import { currentLineTextAtom, editorLinesAtom } from "@/atoms/filesAtom";
+import { inputRefAtom } from "@/atoms/inputRefAtom";
+import { refocusInput } from "@/utils/refocusInput";
 
 interface BackspaceProps {
   metaKey: boolean;
@@ -32,7 +31,7 @@ function handleEmptyLineBackspace() {
     editorStore.set(currentLineTextAtom, lines[newIndex]);
 
     if (currentLineIndex > 0) {
-      editorStore.set(editorLinesAtom, (prevLines) =>
+      editorStore.set(editorLinesAtom, (prevLines: string[]) =>
         removeLineAtIndex(prevLines, currentLineIndex)
       );
     }
@@ -64,13 +63,8 @@ function handleMetaKeyBackspace() {
   const inputRef = editorStore.get(inputRefAtom);
   if (!inputRef) return;
   const selectionStart = inputRef.selectionStart;
-  const currentLineIndex = editorStore.get(currentLineIndexAtom);
   editorStore.set(currentLineTextAtom, (prevText) => {
     const nextText = prevText.slice(selectionStart);
-    editorStore.set(editorLinesAtom, (prev) => {
-      prev[currentLineIndex] = nextText;
-      return prev;
-    });
     return nextText;
   });
   refocusInput(0);
@@ -116,7 +110,7 @@ function handleLineMerge() {
     });
 
     if (currentLineIndex > 0) {
-      editorStore.set(editorLinesAtom, (prevLines) =>
+      editorStore.set(editorLinesAtom, (prevLines: string[]) =>
         removeLineAtIndex(prevLines, currentLineIndex)
       );
     }
@@ -147,14 +141,9 @@ function removeWord() {
     }
   }
   if (startingIndex === -1) {
-    editorStore.set(currentLineTextAtom, () => {
-      const nextText = currentLineText.slice(selectionStart);
-      editorStore.set(editorLinesAtom, (prev) => {
-        prev[currentLineIndex] = nextText;
-        return prev;
-      });
-      return nextText;
-    });
+    editorStore.set(currentLineTextAtom, () =>
+      currentLineText.slice(selectionStart)
+    );
   } else {
     editorStore.set(
       currentLineTextAtom,

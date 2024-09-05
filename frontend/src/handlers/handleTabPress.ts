@@ -1,7 +1,7 @@
-import { editorStore } from "../App";
-import { currentLineTextAtom } from "../atoms/currentLineTextAtom";
-import { cursorPositionAtom } from "../atoms/cursorPositionAtom";
-import { refocusInput } from "../utils/refocusInput";
+import { editorStore } from "@/App";
+import { cursorPositionAtom } from "@/atoms/cursorPositionAtom";
+import { currentLineTextAtom } from "@/atoms/filesAtom";
+import { refocusInput } from "@/utils/refocusInput";
 
 interface Props {
   shiftKey: boolean;
@@ -10,7 +10,7 @@ interface Props {
 export function handleTabPress({ shiftKey }: Props) {
   const selectionStart = editorStore.get(cursorPositionAtom);
 
-  editorStore.set(currentLineTextAtom, (prev) => {
+  editorStore.set(currentLineTextAtom, (prev: string) => {
     let next = prev;
     const key = "\t";
     const isList = prev.match(/^[\t ]*(?=-\s)/);

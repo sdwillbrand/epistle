@@ -1,5 +1,5 @@
-import L1545 from "../L1545";
-import BibleBookMappings from "../BibleBookMappings";
+import BibleBookMappings from "@/BibleBookMappings";
+import L1545 from "@/L1545";
 
 export const tokenizeText = (text: string) => {
   const bibleVerseRegex = /(\(\b(\d\.)?\s?[A-Za-zäöüÄÖÜß]+(\.)?\s\d+.\d+\b\))/g;

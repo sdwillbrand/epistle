@@ -1,12 +1,11 @@
 import { KeyboardEvent } from "react";
-import { editorStore } from "../App";
+import { editorStore } from "@/App";
+import { currentLineIndexAtom } from "@/atoms/currentLineIndexAtom";
+import { currentLineTextAtom, editorLinesAtom } from "@/atoms/filesAtom";
 import {
   openVerseSuggestionAtom,
   verseSuggestionIndexAtom,
-} from "../atoms/verseSuggestionAtom";
-import { editorLinesAtom } from "../atoms/editorLinesAtom";
-import { currentLineIndexAtom } from "../atoms/currentLineIndexAtom";
-import { currentLineTextAtom } from "../atoms/currentLineTextAtom";
+} from "@/atoms/verseSuggestionAtom";
 
 export function handleArrowDownPress(event: KeyboardEvent, dir: -1 | 1) {
   event.preventDefault();

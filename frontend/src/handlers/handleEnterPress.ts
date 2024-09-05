@@ -1,14 +1,13 @@
+import { editorStore } from "@/App";
+import { currentLineIndexAtom } from "@/atoms/currentLineIndexAtom";
+import { currentLineTextAtom, editorLinesAtom } from "@/atoms/filesAtom";
+import { inputRefAtom } from "@/atoms/inputRefAtom";
 import {
   openVerseSuggestionAtom,
   suggestionAtom,
-} from "../atoms/verseSuggestionAtom";
-import { editorLinesAtom } from "../atoms/editorLinesAtom";
-import { editorStore } from "../App";
-import { currentLineTextAtom } from "../atoms/currentLineTextAtom";
-import { currentLineIndexAtom } from "../atoms/currentLineIndexAtom";
-import { inputRefAtom } from "../atoms/inputRefAtom";
-import { refocusInput } from "../utils/refocusInput";
-import { getIndentLevel } from "../utils/getIndentLevel";
+} from "@/atoms/verseSuggestionAtom";
+import { getIndentLevel } from "@/utils/getIndentLevel";
+import { refocusInput } from "@/utils/refocusInput";
 
 export const handleEnterPress = () => {
   const openVerseSuggestion = editorStore.get(openVerseSuggestionAtom);
@@ -35,9 +34,8 @@ function handleNewLineInsertion(
 ) {
   let nextLineText = "";
 
-  editorStore.set(editorLinesAtom, (prevLines) => {
+  editorStore.set(editorLinesAtom, (prevLines: string[]) => {
     let updatedLines = [...prevLines]; // Copy previous lines
-
     if (isAtStartOfFirstLine(selectionStart, currentLineText)) {
       // Case 1: At the beginning of the first line, insert a new line above
       updatedLines.unshift(""); // Add an empty line at the beginning
