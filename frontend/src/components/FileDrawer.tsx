@@ -12,12 +12,15 @@ export const FileDrawer = ({ open }: Props) => {
   return (
     <div
       className={classNames(
-        "fixed top-0 right-0 shadow-2xl pl-4 pr-20 pt-1 bg-blue-950 h-full z-50"
+        "fixed top-0 right-0 duration-500 shadow-2xl pl-4 pr-20 pt-1 bg-blue-950 h-full z-50 transition-transform",
+        {
+          "animate-in slide-in-from-right-full translate-x-0": open,
+          "translate-x-full": !open,
+        }
       )}
-      hidden={!open}
     >
       <h1>Explorer</h1>
-      <div className="w-full border-1 border mb-2"></div>
+      <div className="w-full border-1 border mb-2" />
       {files.map((file, i) => (
         <div
           key={file._id}

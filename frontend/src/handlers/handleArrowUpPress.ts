@@ -11,22 +11,17 @@ export const handleArrowUpPress = (event: KeyboardEvent) => {
 
   const openVerseSuggestion = editorStore.get(openVerseSuggestionAtom);
   const currentLineIndex = editorStore.get(currentLineIndexAtom);
-  const currentLineText = editorStore.get(currentLineTextAtom);
   const lines = editorStore.get(editorLinesAtom);
 
   if (!openVerseSuggestion) {
-    handleArrowUpNavigation(currentLineIndex, currentLineText, lines);
+    handleArrowUpNavigation(currentLineIndex, lines);
   } else {
     navigateVerseSuggestion();
   }
 };
 
 // Handles normal navigation for ArrowUp when verse suggestions are not open
-function handleArrowUpNavigation(
-  currentLineIndex: number,
-  currentLineText: string,
-  lines: string[]
-) {
+function handleArrowUpNavigation(currentLineIndex: number, lines: string[]) {
   if (currentLineIndex > 0) {
     editorStore.set(currentLineIndexAtom, (prevIndex) => {
       const nextLineIndex = Math.max(prevIndex - 1, 0);

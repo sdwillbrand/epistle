@@ -53,12 +53,11 @@ function handleNewLineInsertion(
       // Case 3: At the start of a non-first line, insert a new line below
       updatedLines.splice(currentLineIndex + 1, 0, ""); // Insert empty line at the current index
     }
-
+    console.log({ nextLineText });
     return updatedLines;
   });
-
-  const position = adjustCurrentLineText(nextLineText, currentLineText);
   editorStore.set(currentLineIndexAtom, (prev) => prev + 1);
+  const position = adjustCurrentLineText(nextLineText, currentLineText);
   refocusInput(position);
 }
 

@@ -1,4 +1,3 @@
-import { editorStore } from "@/App";
 import { atom, SetStateAction } from "jotai";
 import { currentLineIndexAtom } from "./currentLineIndexAtom";
 
@@ -25,7 +24,6 @@ export const currentLineTextAtom = atom(
     return lines[lineIndex] || "";
   },
   (get, set, action: SetStateAction<string>) => {
-    console.log("UPDATING");
     const fileIndex = get(currentFileIndexAtom);
     const lineIndex = get(currentLineIndexAtom);
 
@@ -56,13 +54,8 @@ export const currentLineTextAtom = atom(
 );
 
 export const editorLinesAtom = atom(
-  (get) => {
-    const result = get(filesAtom)[get(currentFileIndexAtom)].lines;
-    console.log({ result });
-    return result;
-  },
+  (get) => get(filesAtom)[get(currentFileIndexAtom)].lines,
   (get, set, action: SetStateAction<string[]>) => {
-    console.log({ action });
     set(filesAtom, (prev) => {
       const currentFileIndex = get(currentFileIndexAtom);
       const updatedFiles = [...prev]; // Create a shallow copy of the files array
@@ -80,7 +73,6 @@ export const editorLinesAtom = atom(
         ...updatedFiles[currentFileIndex], // Copy the current file's data
         lines: updatedLines, // Update the lines
       };
-      console.log({ updatedLines });
       return updatedFiles; // Return the updated files array
     });
   }
